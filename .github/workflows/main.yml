@@ -47,6 +47,20 @@ jobs:
             sudo chown -R www-data:www-data /usr/share/nginx/html || true
             sudo chmod -R 755 /usr/share/nginx/html || true
 
+            # Ensure nginx is installed (install if missing)
+            if ! command -v nginx >/dev/null 2>&1; then
+              echo "nginx not found — attempting to install"
+              if command -v apt-get >/dev/null 2>&1; then
+                sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+                sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y nginx
+              else
+                echo "No supported package manager (apt-get or yum) found to install nginx."
+                exit 1
+              fi
+            fi
+
             # Try to restart nginx in several ways
             if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q nginx; then
               sudo systemctl restart nginx
@@ -55,6 +69,6 @@ jobs:
             elif command -v nginx >/dev/null 2>&1; then
               sudo nginx -s reload || sudo nginx || true
             else
-              echo "nginx not installed on the instance. Install with apt/yum or adjust the service name."
+              echo "nginx not installed on the instance even after attempted install. Install with apt/yum or adjust the service name."
               exit 1
             fi
